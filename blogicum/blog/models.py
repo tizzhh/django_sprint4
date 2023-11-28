@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -107,3 +108,6 @@ class Post(PublishedCreatedModel):
 
     def __str__(self) -> str:
         return ' '.join(self.title.split()[:WORD_LIMIT_IN_STR]) + '...'
+
+    def get_absolute_url(self):
+        return reverse('blog:post_detail', kwargs={"post_id": self.pk})

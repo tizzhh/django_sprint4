@@ -1,8 +1,14 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import (
+    CreateView,
+    DetailView,
+    ListView,
+    UpdateView,
+    DeleteView,
+)
 
 from .forms import ProfileForm, PostForm
 from .models import Category, Post, User
@@ -88,6 +94,23 @@ class CategoryListView(ListView):
         return context
 
 
+class PostDeleteView(LoginRequiredMixin, DeleteView):
+    model = Post
+    success_url = reverse_lazy('blog:index')
+    template_name = 'blog/post_form.html'
+
+    def get_object(self):
+        return get_object_or_404(Post, id=self.kwargs.get('post_id'))
+
+
+class PostUpdateView(LoginRequiredMixin, UpdateView):
+    model = Post
+    form_class = PostForm
+
+    def get_object(self):
+        return get_object_or_404(Post, id=self.kwargs.get('post_id'))
+
+
 class PostCreateView(LoginRequiredMixin, RedirectMixin, CreateView):
     model = Post
     form_class = PostForm
@@ -101,6 +124,11 @@ class PostDetailView(DetailView):
     model = Post
 
     def get_object(self):
+        author = Post.objects.values('author__username').filter(
+            id=self.kwargs.get('post_id')
+        )[0]['author__username']
+        if self.request.user.username == author:
+            return get_object_or_404(Post, id=self.kwargs.get('post_id'))
         return get_object_or_404(
             select_related_all_filtered(), pk=self.kwargs.get('post_id')
         )
