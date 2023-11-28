@@ -1,11 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, render
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
-from django.utils import timezone
 from django.urls import reverse
+from django.utils import timezone
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from .models import Category, Post, User
 from .forms import ProfileForm
+from .models import Category, Post, User
 
 
 def select_related_all_filtered(model=Post.objects):
@@ -40,6 +40,7 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
     # почему-то ищет auth/user_detail.html
     template_name = 'blog/user_detail.html'
     context_object_name = 'profile'
+    paginate_by = 10
 
     def get_object(self):
         return get_object_or_404(User, username=self.kwargs.get('username'))
@@ -64,6 +65,27 @@ class IndexListView(ListView):
     model = Post
     queryset = select_related_all_filtered()
     paginate_by = 10
+
+
+class CategoryListView(ListView):
+    model = Post
+    template_name = 'blog/category.html'
+    paginate_by = 10
+    category = None
+
+    def get_queryset(self):
+        print(self.kwargs.get('category'))
+        self.category = get_object_or_404(
+            Category,
+            slug=self.kwargs.get('category_slug'),
+            is_published=True,
+        )
+        return select_related_all_filtered(self.category.posts)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = self.category
+        return context
 
 
 def post_detail(request, post_id):
