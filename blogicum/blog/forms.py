@@ -3,7 +3,13 @@ from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from .models import Post, User
+from .models import Comment, Post, User
+
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ('text',)
 
 
 class PostForm(forms.ModelForm):
