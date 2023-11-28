@@ -1,11 +1,18 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from .forms import ProfileForm
+from .forms import ProfileForm, PostForm
 from .models import Category, Post, User
+
+
+class RedirectMixin:
+    def get_success_url(self):
+        return reverse(
+            'blog:profile', kwargs={'username': self.request.user.username}
+        )
 
 
 def select_related_all_filtered(model=Post.objects):
@@ -20,22 +27,17 @@ def select_related_all_filtered(model=Post.objects):
     )
 
 
-class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+class ProfileUpdateView(LoginRequiredMixin, RedirectMixin, UpdateView):
     model = User
     form_class = ProfileForm
     # почему-то ищет auth в auth
     template_name = 'blog/user_form.html'
 
-    def get_success_url(self):
-        return reverse(
-            'blog:profile', kwargs={'username': self.request.user.username}
-        )
-
     def get_object(self):
         return get_object_or_404(User, username=self.request.user.username)
 
 
-class ProfileDetailView(LoginRequiredMixin, DetailView):
+class ProfileDetailView(DetailView):
     model = User
     # почему-то ищет auth/user_detail.html
     template_name = 'blog/user_detail.html'
@@ -47,18 +49,17 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_obj'] = select_related_all_filtered().filter(
-            author__username=self.kwargs.get('username')
-        )
+        if self.request.user.username == self.kwargs.get('username'):
+            context['page_obj'] = Post.objects.select_related(
+                'location',
+                'author',
+                'category',
+            ).filter(author__username=self.kwargs.get('username'))
+        else:
+            context['page_obj'] = select_related_all_filtered().filter(
+                author__username=self.kwargs.get('username')
+            )
         return context
-
-
-class PostCreateView(LoginRequiredMixin, CreateView):
-    model = Post
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
 
 
 class IndexListView(ListView):
@@ -69,12 +70,11 @@ class IndexListView(ListView):
 
 class CategoryListView(ListView):
     model = Post
-    template_name = 'blog/category.html'
+    template_name = 'blog/category_list.html'
     paginate_by = 10
     category = None
 
     def get_queryset(self):
-        print(self.kwargs.get('category'))
         self.category = get_object_or_404(
             Category,
             slug=self.kwargs.get('category_slug'),
@@ -88,30 +88,19 @@ class CategoryListView(ListView):
         return context
 
 
-def post_detail(request, post_id):
-    post = get_object_or_404(
-        select_related_all_filtered(),
-        pk=post_id,
-    )
-    return render(
-        request,
-        'blog/detail.html',
-        {'post': post},
-    )
+class PostCreateView(LoginRequiredMixin, RedirectMixin, CreateView):
+    model = Post
+    form_class = PostForm
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
 
 
-def category_posts(request, category_slug):
-    category = get_object_or_404(
-        Category,
-        slug=category_slug,
-        is_published=True,
-    )
-    post_list = select_related_all_filtered(category.posts)
-    return render(
-        request,
-        'blog/category.html',
-        {
-            'post_list': post_list,
-            'category': category,
-        },
-    )
+class PostDetailView(DetailView):
+    model = Post
+
+    def get_object(self):
+        return get_object_or_404(
+            select_related_all_filtered(), pk=self.kwargs.get('post_id')
+        )
