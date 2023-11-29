@@ -122,7 +122,7 @@ class Comment(models.Model):
         Post,
         on_delete=models.CASCADE,
     )
-    pub_date = models.DateTimeField(
+    created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Добавлено',
     )
@@ -133,4 +133,4 @@ class Comment(models.Model):
 
     class Meta:
         default_related_name = 'comments'
-        ordering = ['-pub_date']
+        ordering = ['-created_at']
