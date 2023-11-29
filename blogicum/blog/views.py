@@ -3,19 +3,29 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import (
-    CreateView,
-    DeleteView,
-    DetailView,
-    ListView,
-    UpdateView,
-)
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  UpdateView)
 
 from .forms import CommentForm, PostForm, ProfileForm
 from .models import Category, Comment, Post, User
 
 
-class RedirectMixin:
+# После написания этого ужаса я очень благодарен
+# за существование ревьюеров 🥴
+
+class CommentMixin:
+    def get_object(self):
+        return get_object_or_404(
+            Comment, pk=self.kwargs.get('comment_id'), author=self.request.user
+        )
+
+    def get_success_url(self):
+        return reverse(
+            'blog:post_detail', kwargs={'post_id': self.kwargs.get('post_id')}
+        )
+
+
+class ProfileRedirectMixin:
     def get_success_url(self):
         return reverse(
             'blog:profile', kwargs={'username': self.request.user.username}
@@ -34,7 +44,7 @@ def select_related_all_filtered(model=Post.objects):
     )
 
 
-class ProfileUpdateView(LoginRequiredMixin, RedirectMixin, UpdateView):
+class ProfileUpdateView(LoginRequiredMixin, ProfileRedirectMixin, UpdateView):
     model = User
     form_class = ProfileForm
     # почему-то ищет auth в auth :(
@@ -113,12 +123,9 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'blog/post_form.html'
 
     def get_object(self):
-        return get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-
-
-# E           AssertionError: Убедитесь, что при отправке формы редактирования
-# поста неавторизованным пользователем он
-# перенаправляется на страницу публикации (/posts/<int:post_id>/).
+        return get_object_or_404(
+            Post, pk=self.kwargs.get('post_id'), author=self.request.user
+        )
 
 
 class PostUpdateView(UpdateView):
@@ -126,32 +133,21 @@ class PostUpdateView(UpdateView):
     form_class = PostForm
 
     def get_object(self):
-        if self.request.user.is_authenticated:
-            return get_object_or_404(
-                Post, pk=self.kwargs.get('post_id'), author=self.request.user
-            )
-        else:
-            return get_object_or_404(
-                Post,
-                pk=self.kwargs.get('post_id'),
-            )
+        return get_object_or_404(Post, pk=self.kwargs.get('post_id'))
 
-    def form_valid(self, form):
-        if not self.request.user.is_authenticated:
+    def dispatch(self, request, *args, **kwargs):
+        post = self.get_object()
+        if post.author != request.user:
             return redirect(
                 reverse(
                     'blog:post_detail',
                     kwargs={'post_id': self.kwargs.get('post_id')},
                 )
             )
-        return super().form_valid(form)
-
-    # def get_login_url(self):
-    # return reverse('blog:post_detail',
-    # kwargs={'post_id': self.kwargs.get('post_id')})
+        return super().dispatch(request, *args, **kwargs)
 
 
-class PostCreateView(LoginRequiredMixin, RedirectMixin, CreateView):
+class PostCreateView(LoginRequiredMixin, ProfileRedirectMixin, CreateView):
     model = Post
     form_class = PostForm
 
@@ -164,14 +160,13 @@ class PostDetailView(DetailView):
     model = Post
 
     def get_object(self):
-        author = Post.objects.values('author__username').filter(
-            pk=self.kwargs.get('post_id')
-        )[0]['author__username']
-        if self.request.user.username == author:
-            return get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        return get_object_or_404(
-            select_related_all_filtered(), pk=self.kwargs.get('post_id')
+        post_id = self.kwargs.get('post_id')
+        author = (
+            Post.objects.values('author__username').filter(pk=post_id).first()
         )
+        if author and self.request.user.username == author['author__username']:
+            return get_object_or_404(Post, pk=post_id)
+        return get_object_or_404(select_related_all_filtered(), pk=post_id)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -200,27 +195,11 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class CommentUpdateView(LoginRequiredMixin, UpdateView):
+class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
     model = Comment
     form_class = CommentForm
 
-    def get_object(self):
-        return get_object_or_404(Comment, pk=self.kwargs.get('comment_id'))
 
-    def get_success_url(self):
-        return reverse(
-            'blog:post_detail', kwargs={'post_id': self.kwargs.get('post_id')}
-        )
-
-
-class CommentDeleteView(LoginRequiredMixin, DeleteView):
+class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
     model = Comment
     template_name = 'blog/comment_form.html'
-
-    def get_object(self):
-        return get_object_or_404(Comment, pk=self.kwargs.get('comment_id'))
-
-    def get_success_url(self):
-        return reverse(
-            'blog:post_detail', kwargs={'post_id': self.kwargs.get('post_id')}
-        )

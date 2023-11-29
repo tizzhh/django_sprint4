@@ -133,4 +133,4 @@ class Comment(models.Model):
 
     class Meta:
         default_related_name = 'comments'
-        ordering = ['-created_at']
+        ordering = ['created_at']

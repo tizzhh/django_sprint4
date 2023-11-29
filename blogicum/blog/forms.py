@@ -1,7 +1,5 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-# from django.core.exceptions import ValidationError
-# from django.utils import timezone
 
 from .models import Comment, Post, User
 
@@ -23,7 +21,9 @@ class PostForm(forms.ModelForm):
             'pub_date',
             'image',
         )
-        widgets = {'pub_date': forms.DateTimeInput({'type': 'datetime-local'})}
+        widgets = {'pub_date': forms.DateTimeInput({'type': 'datetime-local'}),
+                   'text': forms.Textarea({'type': 'textarea'}),
+                   }
 
 
 class ProfileForm(forms.ModelForm):
