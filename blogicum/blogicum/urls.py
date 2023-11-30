@@ -1,10 +1,9 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path, reverse_lazy
-from django.views.generic.edit import CreateView
+from django.urls import include, path
 
-from blog.forms import CustomUserForm
+from . import views
 
 handler404 = 'pages.views.error_404'
 handler500 = 'pages.views.error_500'
@@ -15,11 +14,7 @@ urlpatterns = [
     path('auth/', include('django.contrib.auth.urls')),
     path(
         'auth/registration/',
-        CreateView.as_view(
-            template_name='registration/registration_form.html',
-            form_class=CustomUserForm,
-            success_url=reverse_lazy('blog:index'),
-        ),
+        views.AuthUserCreateView.as_view(),
         name='registration',
     ),
     path('', include('blog.urls', namespace='blog')),

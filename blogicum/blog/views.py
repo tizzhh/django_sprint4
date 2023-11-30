@@ -10,9 +10,6 @@ from .forms import CommentForm, PostForm, ProfileForm
 from .models import Category, Comment, Post, User
 
 
-# После написания этого ужаса я очень благодарен
-# за существование ревьюеров 🥴
-
 class CommentMixin:
     def get_object(self):
         return get_object_or_404(
@@ -47,7 +44,6 @@ def select_related_all_filtered(model=Post.objects):
 class ProfileUpdateView(LoginRequiredMixin, ProfileRedirectMixin, UpdateView):
     model = User
     form_class = ProfileForm
-    # почему-то ищет auth в auth :(
     template_name = 'blog/user_form.html'
 
     def get_object(self):
@@ -89,7 +85,6 @@ class IndexListView(ListView):
         comment_count=Count('comments')
     )
     paginate_by = 10
-    # annotate ломает ordering из Class meta модели...
     ordering = ['-pub_date']
 
 
