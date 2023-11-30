@@ -1,13 +1,34 @@
 from django.contrib import admin
+from django.db.models import Count
 
-from .models import Category, Location, Post
+from .models import Category, Comment, Location, Post
 
 admin.site.empty_value_display = 'Не задано'
+
+
+class CommentInline(admin.StackedInline):
+    model = Comment
+    extra = 0
 
 
 class PostInline(admin.StackedInline):
     model = Post
     extra = 0
+
+
+class CommentAdmin(admin.ModelAdmin):
+    list_display = (
+        'post',
+        'text',
+        'created_at',
+        'author',
+    )
+    list_editable = ('text',)
+    search_fields = ('post__title',)
+    list_filter = (
+        'created_at',
+        'author',
+    )
 
 
 class CategoryAdmin(admin.ModelAdmin):
@@ -28,7 +49,6 @@ class CategoryAdmin(admin.ModelAdmin):
         'created_at',
         'is_published',
     )
-    list_display_links = ('title',)
     inlines = (PostInline,)
 
 
@@ -44,11 +64,19 @@ class LocationAdmin(admin.ModelAdmin):
         'created_at',
         'is_published',
     )
-    list_display_links = ('name',)
     inlines = (PostInline,)
 
 
 class PostAdmin(admin.ModelAdmin):
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(comment_count=Count('comments'))
+
+    def comment_count(self, instance):
+        return instance.comment_count
+
+    comment_count.short_description = 'Количество комментариев'
+
     list_display = (
         'title',
         'text',
@@ -58,6 +86,7 @@ class PostAdmin(admin.ModelAdmin):
         'category',
         'is_published',
         'created_at',
+        'comment_count',
     )
     list_editable = (
         'is_published',
@@ -71,9 +100,10 @@ class PostAdmin(admin.ModelAdmin):
         'location',
         'is_published',
     )
-    list_display_links = ('title',)
+    inlines = (CommentInline,)
 
 
 admin.site.register(Post, PostAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Location, LocationAdmin)
+admin.site.register(Comment, CommentAdmin)

@@ -5,7 +5,7 @@ from django.urls import reverse
 User = get_user_model()
 
 MAX_STRING_LENGTH = 256
-WORD_LIMIT_IN_STR = 3
+STR_LENGTH_LIMIT = 50
 
 
 class PublishedCreatedModel(models.Model):
@@ -49,7 +49,7 @@ class Category(PublishedCreatedModel):
         verbose_name_plural = 'Категории'
 
     def __str__(self) -> str:
-        return ' '.join(self.title.split()[:WORD_LIMIT_IN_STR]) + '...'
+        return self.title[:STR_LENGTH_LIMIT] + '...'
 
 
 class Location(PublishedCreatedModel):
@@ -64,7 +64,7 @@ class Location(PublishedCreatedModel):
         verbose_name_plural = 'Местоположения'
 
     def __str__(self) -> str:
-        return ' '.join(self.name.split()[:WORD_LIMIT_IN_STR]) + '...'
+        return self.name[:STR_LENGTH_LIMIT] + '...'
 
 
 class Post(PublishedCreatedModel):
@@ -110,13 +110,15 @@ class Post(PublishedCreatedModel):
         ordering = ['-pub_date']
 
     def __str__(self) -> str:
-        return ' '.join(self.title.split()[:WORD_LIMIT_IN_STR]) + '...'
+        return self.title[:STR_LENGTH_LIMIT] + '...'
 
     def get_absolute_url(self):
         return reverse('blog:post_detail', kwargs={"post_id": self.pk})
 
 
 class Comment(models.Model):
+    """Модель комментария."""
+
     text = models.TextField(verbose_name='Текст комментария')
     post = models.ForeignKey(
         Post,
@@ -132,5 +134,12 @@ class Comment(models.Model):
     )
 
     class Meta:
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
         default_related_name = 'comments'
         ordering = ['created_at']
+
+    def __str__(self):
+        return (
+            'Комментарий к посту ' + self.post.title[:STR_LENGTH_LIMIT] + '...'
+        )
