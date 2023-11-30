@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from . import views
+from blog import views
 
 handler404 = 'pages.views.error_404'
 handler500 = 'pages.views.error_500'

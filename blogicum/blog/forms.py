@@ -13,15 +13,7 @@ class CommentForm(forms.ModelForm):
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = (
-            'title',
-            'text',
-            'location',
-            'category',
-            'pub_date',
-            'image',
-        )
-        # поставил USE_L10N = False и это решило проблему вроде бы
+        exclude = ('author',)
         widgets = {
             'pub_date': forms.DateTimeInput({'type': 'datetime-local'}),
             'text': forms.Textarea({'type': 'textarea'}),

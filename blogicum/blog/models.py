@@ -140,6 +140,4 @@ class Comment(models.Model):
         ordering = ('created_at',)
 
     def __str__(self):
-        return (
-            'Комментарий к посту ' + self.post.title[:STR_LENGTH_LIMIT] + '...'
-        )
+        return self.text[:STR_LENGTH_LIMIT] + '...'

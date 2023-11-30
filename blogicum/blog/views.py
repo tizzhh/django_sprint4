@@ -1,16 +1,21 @@
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
-                                  UpdateView)
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
 
-from .forms import CommentForm, PostForm, ProfileForm
-from .helpers import (CommentMixin, PostUpdateDeleteMixin,
-                      ProfileRedirectMixin, select_related_all_filtered)
+from .forms import CommentForm, CustomUserForm, PostForm, ProfileForm
+from .mixins import CommentMixin, PostUpdateDeleteMixin, ProfileRedirectMixin
 from .models import Category, Comment, Post, User
-from blogicum.settings import PAGINATE_BY
+from .queryset_utilities import get_posts
 
 
 class ProfileUpdateView(LoginRequiredMixin, ProfileRedirectMixin, UpdateView):
@@ -23,7 +28,7 @@ class ProfileUpdateView(LoginRequiredMixin, ProfileRedirectMixin, UpdateView):
 
 class ProfileListView(ListView):
     template_name = 'blog/user_detail.html'
-    paginate_by = PAGINATE_BY
+    paginate_by = settings.PAGINATE_BY
 
     def get_user_obj(self):
         return get_object_or_404(User, username=self.kwargs['username'])
@@ -31,11 +36,11 @@ class ProfileListView(ListView):
     def get_queryset(self):
         user_obj = self.get_user_obj()
         if self.request.user.username == user_obj.username:
-            profile_posts = select_related_all_filtered(user_obj.posts)
+            profile_posts = get_posts(user_obj.posts, comment_count=True)
         else:
-            profile_posts = select_related_all_filtered(
-                user_obj.posts, all_posts=False, comment_count=True
-            ).order_by('-pub_date')
+            profile_posts = get_posts(
+                user_obj.posts, only_published=True, comment_count=True
+            )
         return profile_posts
 
     def get_context_data(self, **kwargs):
@@ -45,17 +50,21 @@ class ProfileListView(ListView):
 
 
 class IndexListView(ListView):
-    queryset = select_related_all_filtered(all_posts=False, comment_count=True)
-    paginate_by = PAGINATE_BY
+    queryset = get_posts(only_published=True, comment_count=True)
+    paginate_by = settings.PAGINATE_BY
     ordering = ('-pub_date',)
 
 
 class CategoryListView(ListView):
     template_name = 'blog/category_list.html'
-    paginate_by = PAGINATE_BY
-    # немного не понял, почему category = None - лишняя строка
-    # я ведь обращаюсь к этой переменной в get_queryset
-    # и в get_context_data.
+    paginate_by = settings.PAGINATE_BY
+    # неправильно сформулировал вопрос про category = None
+    # у меня же нет такого аттрибута класса,
+    # поэтому я решил его задать, ведь
+    # на 70 строчке я его менял, хотя он не объявлен.
+    # вот что мне не очень понятно.
+    # Как я понял, питон позволяет создавать
+    # дополнительные аттрибуты при вызове методов.
 
     def get_category_obj(self):
         return get_object_or_404(
@@ -65,10 +74,10 @@ class CategoryListView(ListView):
         )
 
     def get_queryset(self):
-        self.category = self.get_category_obj()
-        return select_related_all_filtered(
-            self.category.posts, all_posts=False, comment_count=True
-        ).order_by('-pub_date')
+        category = self.get_category_obj()
+        return get_posts(
+            category.posts, only_published=True, comment_count=True
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -97,11 +106,11 @@ class PostCreateView(LoginRequiredMixin, ProfileRedirectMixin, CreateView):
 class PostDetailView(DetailView):
     def get_object(self):
         post_id = self.kwargs['post_id']
-        post = get_object_or_404(select_related_all_filtered(), pk=post_id)
+        post = get_object_or_404(get_posts(), pk=post_id)
         if self.request.user != post.author and (
-            not post.is_published
-            or not post.category.is_published
-            or post.pub_date > timezone.now()
+                not post.is_published
+                or not post.category.is_published
+                or post.pub_date > timezone.now()
         ):
             raise Http404
         return post
@@ -139,3 +148,9 @@ class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
 
 class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
     ...
+
+
+class AuthUserCreateView(CreateView):
+    template_name = 'registration/registration_form.html'
+    form_class = CustomUserForm
+    success_url = reverse_lazy('blog:index')
