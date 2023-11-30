@@ -107,13 +107,13 @@ class Post(PublishedCreatedModel):
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         default_related_name = 'posts'
-        ordering = ['-pub_date']
+        ordering = ('-pub_date',)
 
     def __str__(self) -> str:
         return self.title[:STR_LENGTH_LIMIT] + '...'
 
     def get_absolute_url(self):
-        return reverse('blog:post_detail', kwargs={"post_id": self.pk})
+        return reverse('blog:post_detail', kwargs={'post_id': self.pk})
 
 
 class Comment(models.Model):
@@ -137,7 +137,7 @@ class Comment(models.Model):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
         default_related_name = 'comments'
-        ordering = ['created_at']
+        ordering = ('created_at',)
 
     def __str__(self):
         return (

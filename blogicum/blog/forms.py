@@ -21,9 +21,11 @@ class PostForm(forms.ModelForm):
             'pub_date',
             'image',
         )
-        widgets = {'pub_date': forms.DateTimeInput({'type': 'datetime-local'}),
-                   'text': forms.Textarea({'type': 'textarea'}),
-                   }
+        # поставил USE_L10N = False и это решило проблему вроде бы
+        widgets = {
+            'pub_date': forms.DateTimeInput({'type': 'datetime-local'}),
+            'text': forms.Textarea({'type': 'textarea'}),
+        }
 
 
 class ProfileForm(forms.ModelForm):

@@ -85,7 +85,7 @@ class IndexListView(ListView):
         comment_count=Count('comments')
     )
     paginate_by = 10
-    ordering = ['-pub_date']
+    ordering = ('-pub_date',)
 
 
 class CategoryListView(ListView):
