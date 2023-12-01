@@ -58,13 +58,6 @@ class IndexListView(ListView):
 class CategoryListView(ListView):
     template_name = 'blog/category_list.html'
     paginate_by = settings.PAGINATE_BY
-    # неправильно сформулировал вопрос про category = None
-    # у меня же нет такого аттрибута класса,
-    # поэтому я решил его задать, ведь
-    # на 70 строчке я его менял, хотя он не объявлен.
-    # вот что мне не очень понятно.
-    # Как я понял, питон позволяет создавать
-    # дополнительные аттрибуты при вызове методов.
 
     def get_category_obj(self):
         return get_object_or_404(
@@ -108,9 +101,9 @@ class PostDetailView(DetailView):
         post_id = self.kwargs['post_id']
         post = get_object_or_404(get_posts(), pk=post_id)
         if self.request.user != post.author and (
-                not post.is_published
-                or not post.category.is_published
-                or post.pub_date > timezone.now()
+            not post.is_published
+            or not post.category.is_published
+            or post.pub_date > timezone.now()
         ):
             raise Http404
         return post
