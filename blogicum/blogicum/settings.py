@@ -8,7 +8,12 @@ SECRET_KEY = (
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'www.tizzhh.pythonanywhere.com',
+    'tizzhh.pythonanywhere.com',
+]
 
 CSRF_FAILURE_VIEW = 'pages.views.error_403_csrf'
 
